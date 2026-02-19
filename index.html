@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TipJar P2P — Support Creators On-Chain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --card: #181818;
+    --accent: #f5c518;
+    --accent2: #ff4d4d;
+    --text: #f0ede8;
+    --muted: #666;
+    --border: #222;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.5;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(245,197,24,0.3);
+  }
+
+  .logo span { color: var(--text); }
+
+  .badge {
+    font-size: 0.65rem;
+    background: var(--accent);
+    color: #000;
+    padding: 2px 8px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    vertical-align: super;
+  }
+
+  nav {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 0.5rem 1.2rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .btn:hover {
+    background: #fff;
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  .btn-ghost:hover {
+    background: var(--card);
+    color: var(--text);
+    transform: translateY(-1px);
+  }
+
+  /* Hero */
+  .hero {
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+    position: relative;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(245,197,24,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    letter-spacing: 0.05em;
+    line-height: 0.95;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+    display: block;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 0.85rem;
+    max-width: 480px;
+    margin: 0 auto 2.5rem;
+    line-height: 1.8;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-lg {
+    padding: 0.85rem 2.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .stat {
+    padding: 1.2rem 3rem;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    flex: 1;
+    max-width: 200px;
+  }
+
+  .stat:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--accent);
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* Main content */
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .section-title span { color: var(--text); }
+
+  /* Post form */
+  .post-form {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    margin-bottom: 3rem;
+    position: relative;
+    overflow: hidden;
+    display: none;
+  }
+
+  .post-form.active { display: block; }
+
+  .post-form::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--accent);
+  }
+
+  .form-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    margin-bottom: 1.2rem;
+    padding-left: 0.5rem;
+    color: var(--accent);
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+
+  label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  input, textarea, select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.6rem 0.8rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  textarea { resize: vertical; min-height: 90px; }
+
+  /* Cards grid */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    position: relative;
+    transition: all 0.2s;
+    animation: fadeIn 0.4s ease both;
+  }
+
+  .card:hover {
+    border-color: #333;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-type {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-type-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    display: inline-block;
+  }
+
+  .card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
+    line-height: 1.1;
+  }
+
+  .card-creator {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .card-creator strong { color: var(--accent); }
+
+  .card-desc {
+    font-size: 0.78rem;
+    color: #aaa;
+    line-height: 1.7;
+    margin-bottom: 1.2rem;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+
+  .tip-amount {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: var(--accent);
+  }
+
+  .tip-amount span { font-size: 0.7rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  .tip-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-tip {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 0.4rem 0.9rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+
+  .btn-tip:hover {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .btn-tip.active {
+    background: var(--accent);
+    color: #000;
+  }
+
+  /* Tip modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .modal-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 2rem;
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    transform: translateY(20px);
+    transition: transform 0.2s;
+  }
+
+  .modal-overlay.active .modal {
+    transform: translateY(0);
+  }
+
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+  }
+
+  .modal h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.5rem;
+  }
+
+  .modal-sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .tip-presets {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .preset-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.4rem 0.9rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover, .preset-btn.active {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .modal-close:hover { color: var(--text); }
+
+  /* P2P indicator */
+  .p2p-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .p2p-dot {
+    width: 7px; height: 7px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--accent);
+    color: #000;
+    padding: 0.8rem 2rem;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 9000;
+    white-space: nowrap;
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Categories */
+  .categories {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+
+  .cat-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.35rem 0.9rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition: all 0.15s;
+  }
+
+  .cat-btn:hover, .cat-btn.active {
+    border-color: var(--text);
+    color: var(--text);
+  }
+
+  .cat-btn.active {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+    display: none;
+  }
+
+  .empty-state.visible { display: block; }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+
+  .empty-state p { font-size: 0.8rem; }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  footer a { color: var(--accent); text-decoration: none; }
+
+  @media (max-width: 600px) {
+    .form-row { grid-template-columns: 1fr; }
+    .stat { padding: 1rem 1.5rem; }
+    .hero h1 { font-size: 3.5rem; }
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">TipJar<span>P2P</span> <span class="badge">BETA</span></div>
+  <nav>
+    <div class="p2p-status">
+      <span class="p2p-dot"></span>
+      <span>Intercom P2P</span>
+    </div>
+    <button class="btn btn-ghost" onclick="toggleForm()">+ Post</button>
+    <button class="btn btn-lg" onclick="connectWallet()">Connect</button>
+  </nav>
+</header>
+
+<section class="hero">
+  <h1>Support Creators<em>On-Chain.</em></h1>
+  <p>Post your work. Receive tips from supporters via Intercom P2P sidechannels. No middlemen. No custodians. Pure peer-to-peer.</p>
+  <div class="hero-actions">
+    <button class="btn btn-lg" onclick="toggleForm()">Post Your Work</button>
+    <button class="btn btn-ghost btn-lg" onclick="scrollToFeed()">Browse Feed ↓</button>
+  </div>
+</section>
+
+<div class="stats-bar">
+  <div class="stat">
+    <span class="stat-num" id="stat-posts">0</span>
+    <span class="stat-label">Posts</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num" id="stat-tips">0</span>
+    <span class="stat-label">Tips Sent</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num" id="stat-tnk">0</span>
+    <span class="stat-label">TNK Tipped</span>
+  </div>
+  <div class="stat">
+    <span class="stat-num" id="stat-creators">0</span>
+    <span class="stat-label">Creators</span>
+  </div>
+</div>
+
+<div class="main" id="feed-section">
+  
+  <!-- Post Form -->
+  <div class="post-form" id="postForm">
+    <div class="form-title">// NEW POST</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Your Name / Handle</label>
+        <input type="text" id="f-name" placeholder="anon_creator">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="f-cat">
+          <option value="Art">Art</option>
+          <option value="Music">Music</option>
+          <option value="Code">Code</option>
+          <option value="Writing">Writing</option>
+          <option value="Video">Video</option>
+          <option value="Research">Research</option>
+          <option value="Design">Design</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="f-title" placeholder="What did you create?">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="f-desc" placeholder="Describe your work, share a link, or tell your story..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Trac Wallet Address (to receive tips)</label>
+      <input type="text" id="f-trac" placeholder="trac1q...">
+    </div>
+    <div style="display:flex; gap:0.8rem;">
+      <button class="btn" onclick="submitPost()">Publish Post</button>
+      <button class="btn btn-ghost" onclick="toggleForm()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="section-header">
+    <div class="section-title"><span>Creator</span> Feed</div>
+    <div style="font-size:0.65rem; color:var(--muted);">Powered by Intercom P2P</div>
+  </div>
+
+  <div class="categories" id="catFilters">
+    <button class="cat-btn active" onclick="filterCat('All', this)">All</button>
+    <button class="cat-btn" onclick="filterCat('Art', this)">Art</button>
+    <button class="cat-btn" onclick="filterCat('Music', this)">Music</button>
+    <button class="cat-btn" onclick="filterCat('Code', this)">Code</button>
+    <button class="cat-btn" onclick="filterCat('Writing', this)">Writing</button>
+    <button class="cat-btn" onclick="filterCat('Video', this)">Video</button>
+    <button class="cat-btn" onclick="filterCat('Research', this)">Research</button>
+    <button class="cat-btn" onclick="filterCat('Design', this)">Design</button>
+  </div>
+
+  <div class="cards-grid" id="cardsGrid"></div>
+  <div class="empty-state" id="emptyState">
+    <span class="empty-icon">📭</span>
+    <p>No posts in this category yet.<br>Be the first to post!</p>
+  </div>
+</div>
+
+<!-- Tip Modal -->
+<div class="modal-overlay" id="tipModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>Send a Tip</h2>
+    <p class="modal-sub" id="modalSub">Supporting: —</p>
+    <label>Quick Select (TNK)</label>
+    <div class="tip-presets">
+      <button class="preset-btn" onclick="selectPreset(this, 100)">100</button>
+      <button class="preset-btn" onclick="selectPreset(this, 500)">500</button>
+      <button class="preset-btn" onclick="selectPreset(this, 1000)">1,000</button>
+      <button class="preset-btn" onclick="selectPreset(this, 5000)">5,000</button>
+      <button class="preset-btn" onclick="selectPreset(this, 10000)">10,000</button>
+    </div>
+    <div class="form-group">
+      <label>Custom Amount (TNK)</label>
+      <input type="number" id="tipAmount" placeholder="Enter amount..." min="1">
+    </div>
+    <div class="form-group">
+      <label>Message (optional)</label>
+      <input type="text" id="tipMessage" placeholder="Keep creating! 🔥">
+    </div>
+    <div class="form-group">
+      <label>Recipient Trac Address</label>
+      <input type="text" id="tipRecipient" readonly style="opacity:0.5;">
+    </div>
+    <button class="btn" style="width:100%; font-size:0.85rem; padding:0.9rem;" onclick="sendTip()">
+      Send Tip via Intercom P2P
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  <p>TipJar P2P &bull; Built on <a href="https://github.com/Trac-Systems/intercom">Intercom</a> by Trac Systems &bull; 
+  Fork: <a href="#">github.com/YOUR_HANDLE/intercom</a></p>
+</footer>
+
+<script>
+// ─────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────
+let posts = [];
+let tips = [];
+let activeCategory = 'All';
+let activeTipPost = null;
+let selectedPresetAmount = null;
+
+const DEMO_POSTS = [
+  {
+    id: 1,
+    name: "pixel_sage",
+    category: "Art",
+    title: "Generative Glitch Series #001",
+    desc: "A collection of 12 generative pieces exploring digital entropy. Each piece uses noise algorithms and palette constraints to create unique visual artifacts. Inspired by old CRT televisions.",
+    trac: "trac1qxyz_pixelsage_demo",
+    tipTotal: 4200,
+    tipCount: 7,
+    time: Date.now() - 3600000
+  },
+  {
+    id: 2,
+    name: "0xmelody",
+    category: "Music",
+    title: "lo-fi beats for late-night coding",
+    desc: "Released a free lo-fi EP (5 tracks, ~22 minutes). Inspired by Tokyo rainy nights. Download free, tip if you vibe. WAV files available on request.",
+    trac: "trac1qxyz_0xmelody_demo",
+    tipTotal: 8800,
+    tipCount: 19,
+    time: Date.now() - 7200000
+  },
+  {
+    id: 3,
+    name: "openrpcdave",
+    category: "Code",
+    title: "Tiny P2P JSON-RPC Library (1.2kb)",
+    desc: "Built a zero-dependency JSON-RPC 2.0 library for browser P2P messaging. Works over Intercom sidechannels out of the box. MIT license. PRs welcome.",
+    trac: "trac1qxyz_openrpcdave_demo",
+    tipTotal: 2100,
+    tipCount: 4,
+    time: Date.now() - 14400000
+  },
+  {
+    id: 4,
+    name: "research_anon",
+    category: "Research",
+    title: "Deep dive: HTLC atomicity in multi-hop P2P",
+    desc: "Published a 3,000 word breakdown of HTLC edge cases in multi-hop payment scenarios. Includes attack vector analysis and mitigation proposals.",
+    trac: "trac1qxyz_researchanon_demo",
+    tipTotal: 1500,
+    tipCount: 3,
+    time: Date.now() - 86400000
+  }
+];
+
+// Init
+(function init() {
+  const saved = localStorage.getItem('tipjar_posts');
+  posts = saved ? JSON.parse(saved) : [...DEMO_POSTS];
+  const savedTips = localStorage.getItem('tipjar_tips');
+  tips = savedTips ? JSON.parse(savedTips) : [];
+  render();
+  updateStats();
+})();
+
+// ─────────────────────────────────────────
+//  RENDER
+// ─────────────────────────────────────────
+function render() {
+  const grid = document.getElementById('cardsGrid');
+  const empty = document.getElementById('emptyState');
+  const filtered = activeCategory === 'All' ? posts : posts.filter(p => p.category === activeCategory);
+  const sorted = [...filtered].sort((a,b) => b.time - a.time);
+
+  if (sorted.length === 0) {
+    grid.innerHTML = '';
+    empty.classList.add('visible');
+    return;
+  }
+  empty.classList.remove('visible');
+
+  grid.innerHTML = sorted.map((p, i) => `
+    <div class="card" style="animation-delay:${i*0.05}s">
+      <div class="card-type">
+        <span class="card-type-dot"></span>
+        ${p.category}
+      </div>
+      <h3>${escHtml(p.title)}</h3>
+      <div class="card-creator">by <strong>${escHtml(p.name)}</strong> &bull; ${timeAgo(p.time)}</div>
+      <p class="card-desc">${escHtml(p.desc)}</p>
+      <div class="card-footer">
+        <div class="tip-amount">
+          ${fmtNum(p.tipTotal)} <span>TNK &bull; ${p.tipCount} tips</span>
+        </div>
+        <div class="tip-actions">
+          <button class="btn-tip" onclick="openTip(${p.id})">Tip ↗</button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateStats() {
+  const creators = new Set(posts.map(p => p.name)).size;
+  const totalTips = posts.reduce((s,p) => s + p.tipCount, 0);
+  const totalTNK  = posts.reduce((s,p) => s + p.tipTotal, 0);
+
+  animateNum('stat-posts', posts.length);
+  animateNum('stat-tips', totalTips);
+  animateNum('stat-tnk', totalTNK);
+  animateNum('stat-creators', creators);
+}
+
+function animateNum(id, target) {
+  const el = document.getElementById(id);
+  let start = 0;
+  const step = Math.ceil(target / 40);
+  const iv = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = fmtNum(start);
+    if (start >= target) clearInterval(iv);
+  }, 20);
+}
+
+// ─────────────────────────────────────────
+//  ACTIONS
+// ─────────────────────────────────────────
+function toggleForm() {
+  const f = document.getElementById('postForm');
+  f.classList.toggle('active');
+  if (f.classList.contains('active')) {
+    f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function submitPost() {
+  const name  = document.getElementById('f-name').value.trim();
+  const cat   = document.getElementById('f-cat').value;
+  const title = document.getElementById('f-title').value.trim();
+  const desc  = document.getElementById('f-desc').value.trim();
+  const trac  = document.getElementById('f-trac').value.trim();
+
+  if (!name || !title || !desc || !trac) {
+    showToast('Please fill all fields!');
+    return;
+  }
+
+  const post = {
+    id: Date.now(),
+    name, category: cat, title, desc, trac,
+    tipTotal: 0,
+    tipCount: 0,
+    time: Date.now()
+  };
+
+  posts.unshift(post);
+  savePosts();
+  render();
+  updateStats();
+  toggleForm();
+  showToast('Post published! ✓');
+
+  // Reset form
+  ['f-name','f-title','f-desc','f-trac'].forEach(id => document.getElementById(id).value = '');
+}
+
+function filterCat(cat, btn) {
+  activeCategory = cat;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function openTip(postId) {
+  activeTipPost = posts.find(p => p.id === postId);
+  if (!activeTipPost) return;
+  document.getElementById('modalSub').textContent = `Supporting: ${activeTipPost.name} — "${activeTipPost.title}"`;
+  document.getElementById('tipRecipient').value = activeTipPost.trac;
+  document.getElementById('tipAmount').value = '';
+  document.getElementById('tipMessage').value = '';
+  selectedPresetAmount = null;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tipModal').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('tipModal').classList.remove('active');
+  activeTipPost = null;
+}
+
+function selectPreset(btn, amount) {
+  selectedPresetAmount = amount;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tipAmount').value = amount;
+}
+
+function sendTip() {
+  const amountInput = document.getElementById('tipAmount').value;
+  const amount = parseInt(amountInput);
+  if (!amount || amount < 1) {
+    showToast('Enter a tip amount!');
+    return;
+  }
+  if (!activeTipPost) return;
+
+  // Simulate P2P tip via Intercom
+  const post = posts.find(p => p.id === activeTipPost.id);
+  if (post) {
+    post.tipTotal += amount;
+    post.tipCount += 1;
+  }
+
+  const tip = {
+    postId: activeTipPost.id,
+    amount,
+    message: document.getElementById('tipMessage').value,
+    time: Date.now()
+  };
+  tips.push(tip);
+
+  savePosts();
+  localStorage.setItem('tipjar_tips', JSON.stringify(tips));
+  render();
+  updateStats();
+  closeModal();
+  showToast(`Tip of ${fmtNum(amount)} TNK sent via Intercom P2P! 🚀`);
+}
+
+function connectWallet() {
+  showToast('Connect wallet — coming soon! (Intercom Auth)');
+}
+
+function scrollToFeed() {
+  document.getElementById('feed-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────
+function savePosts() {
+  localStorage.setItem('tipjar_posts', JSON.stringify(posts));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtNum(n) {
+  if (n >= 1000) return (n/1000).toFixed(n%1000 === 0 ? 0 : 1) + 'K';
+  return n.toString();
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h/24)}d ago`;
+}
+
+// Close modal on overlay click
+document.getElementById('tipModal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
